@@ -52,8 +52,8 @@ class FmodLibrary {
     final libraryDir = Platform.environment[_libraryPathEnv];
     if (libraryDir != null) {
       return FmodLibrary._(
-        DynamicLibrary.open('$libraryDir/$coreName'),
-        DynamicLibrary.open('$libraryDir/$studioName'),
+        _openConfigured('$libraryDir/$coreName', _libraryPathEnv),
+        _openConfigured('$libraryDir/$studioName', _libraryPathEnv),
       );
     }
 
@@ -61,8 +61,8 @@ class FmodLibrary {
     if (sdkRoot != null) {
       final [coreDir, studioDir] = _sdkLibDirs;
       return FmodLibrary._(
-        DynamicLibrary.open('$sdkRoot/$coreDir/$coreName'),
-        DynamicLibrary.open('$sdkRoot/$studioDir/$studioName'),
+        _openConfigured('$sdkRoot/$coreDir/$coreName', _sdkPathEnv),
+        _openConfigured('$sdkRoot/$studioDir/$studioName', _sdkPathEnv),
       );
     }
 
@@ -84,5 +84,27 @@ class FmodLibrary {
       '$_sdkPathEnv to the extracted SDK root or $_libraryPathEnv to a '
       'directory containing $coreName and $studioName.',
     );
+  }
+
+  // Opens a library at a path configured through [envVar], turning the
+  // loader's raw failure into actionable guidance (the common causes
+  // are a wrong path, a mismatched architecture, and macOS refusing
+  // still-quarantined downloads).
+  static DynamicLibrary _openConfigured(String path, String envVar) {
+    try {
+      return DynamicLibrary.open(path);
+    } on ArgumentError catch (error) {
+      final quarantineHint = Platform.isMacOS && File(path).existsSync()
+          ? ' The file exists, so if the underlying error says "library '
+                'load disallowed by system policy", clear the download '
+                'quarantine from the extracted SDK with: xattr -dr '
+                'com.apple.quarantine "<sdk root>".'
+          : ' Check that $envVar points at the right place and that the '
+                'SDK matches this platform and architecture.';
+      throw StateError(
+        'Failed to load the FMOD library at $path (from \$$envVar).'
+        '$quarantineHint\nUnderlying error: ${error.message}',
+      );
+    }
   }
 }
