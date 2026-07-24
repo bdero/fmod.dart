@@ -1,5 +1,5 @@
 // Hand-written FFI bindings for the subset of the FMOD Core and FMOD
-// Studio C APIs this backend uses. Symbols are looked up lazily from a
+// Studio C APIs this package uses. Symbols are looked up lazily from a
 // user-supplied SDK (see FmodLibrary), so merely importing this file
 // never touches native code.
 //
@@ -14,49 +14,9 @@
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
+import 'package:fmod/src/constants.dart';
+import 'package:fmod/src/exceptions.dart';
 import 'package:fmod/src/ffi/library.dart';
-
-/// The FMOD header version these bindings target (2.03.00). Passed to
-/// system creation; FMOD fails with a header-mismatch error when the
-/// user's SDK is incompatible, in which case construct the engine with
-/// the matching version.
-const int kFmodDefaultHeaderVersion = 0x00020300;
-
-// FMOD_RESULT values this backend special-cases.
-const int fmodOk = 0;
-const int fmodErrInvalidHandle = 30;
-const int fmodErrChannelStolen = 3;
-
-// FMOD_MODE flags (fmod_common.h).
-const int fmodLoopOff = 0x00000001;
-const int fmodLoopNormal = 0x00000002;
-const int fmod2d = 0x00000008;
-const int fmod3d = 0x00000010;
-const int fmodCreateSample = 0x00000100;
-const int fmod3dInverseRolloff = 0x00100000;
-const int fmod3dLinearRolloff = 0x00200000;
-const int fmod3dInverseTaperedRolloff = 0x00800000;
-
-// FMOD_STUDIO_* constants (fmod_studio_common.h).
-const int fmodStudioInitNormal = 0;
-const int fmodStudioInitLiveUpdate = 1;
-const int fmodInitNormal = 0;
-const int fmodStudioLoadBankNormal = 0;
-const int fmodStudioLoadMemory = 0;
-const int fmodStudioStopAllowFadeout = 0;
-const int fmodStudioStopImmediate = 1;
-const int fmodTimeUnitMs = 0x1;
-
-/// FMOD_STUDIO_PLAYBACK_STATE.
-const int fmodStudioPlaybackPlaying = 0;
-const int fmodStudioPlaybackSustaining = 1;
-const int fmodStudioPlaybackStopped = 2;
-const int fmodStudioPlaybackStarting = 3;
-const int fmodStudioPlaybackStopping = 4;
-
-/// FMOD_STUDIO_EVENT_PROPERTY indices for distance overrides.
-const int fmodStudioEventPropertyMinDistance = 3;
-const int fmodStudioEventPropertyMaxDistance = 4;
 
 final class FmodVector extends Struct {
   @Float()
@@ -72,19 +32,6 @@ final class Fmod3dAttributes extends Struct {
   external FmodVector velocity;
   external FmodVector forward;
   external FmodVector up;
-}
-
-/// A failed FMOD call.
-class FmodException implements Exception {
-  FmodException(this.operation, this.result);
-
-  final String operation;
-
-  /// The FMOD_RESULT error code; see fmod_common.h for meanings.
-  final int result;
-
-  @override
-  String toString() => 'FmodException($operation failed, FMOD_RESULT $result)';
 }
 
 typedef _R1<A> = Int32 Function(A);
@@ -244,6 +191,10 @@ class FmodBindings {
             _R2<Pointer<Void>, Pointer<Pointer<Void>>>,
             _D2<Pointer<Void>, Pointer<Pointer<Void>>>
           >('FMOD_System_GetMasterChannelGroup'),
+      System_SetOutput = library.core
+          .lookupFunction<_R2<Pointer<Void>, Int32>, _D2<Pointer<Void>, int>>(
+            'FMOD_System_SetOutput',
+          ),
       System_CreateSound = library.core
           .lookupFunction<
             Int32 Function(
@@ -411,6 +362,7 @@ class FmodBindings {
   final int Function(Pointer<Void>, int, double)
   Studio_EventInstance_SetProperty;
   final _D2<Pointer<Void>, Pointer<Pointer<Void>>> System_GetMasterChannelGroup;
+  final _D2<Pointer<Void>, int> System_SetOutput;
   final int Function(
     Pointer<Void>,
     Pointer<Utf8>,

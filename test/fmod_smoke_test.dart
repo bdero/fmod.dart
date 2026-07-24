@@ -130,6 +130,25 @@ void main() {
     sound.release();
   }, skip: skip);
 
+  test('nosound output mixes headless', () async {
+    final headless = FmodStudioSystem.create(output: FmodOutputType.nosound);
+    try {
+      headless.loadBankFile('$_media/Master.strings.bank');
+      headless.loadBankFile('$_media/Master.bank');
+      headless.loadBankFile('$_media/SFX.bank');
+      final event = headless
+          .getEvent('event:/Ambience/Country')
+          .createInstance();
+      event.start();
+      await _pump(headless);
+      expect(event.playbackState, isNot(FmodPlaybackState.stopped));
+      event.stop(mode: FmodStopMode.immediate);
+      event.release();
+    } finally {
+      headless.release();
+    }
+  }, skip: skip);
+
   test('studio bus volume applies', () async {
     system.loadBankFile('$_media/Master.strings.bank');
     system.loadBankFile('$_media/Master.bank');

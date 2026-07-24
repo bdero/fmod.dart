@@ -1,8 +1,4 @@
-import 'dart:ffi';
-
-import 'package:ffi/ffi.dart';
-import 'package:fmod/src/ffi/bindings.dart';
-import 'package:vector_math/vector_math.dart';
+part of 'fmod_base.dart';
 
 /// Native scratch buffers shared by a system's wrapper objects, so the
 /// per-frame calls (3D attributes, playback state polls) allocate

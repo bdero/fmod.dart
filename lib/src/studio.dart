@@ -1,13 +1,4 @@
-import 'dart:ffi';
-import 'dart:typed_data';
-
-import 'package:ffi/ffi.dart';
-import 'package:fmod/src/common.dart';
-import 'package:fmod/src/core.dart';
-import 'package:fmod/src/ffi/bindings.dart';
-import 'package:fmod/src/ffi/library.dart';
-import 'package:fmod/src/system_resources.dart';
-import 'package:vector_math/vector_math.dart';
+part of 'fmod_base.dart';
 
 /// An FMOD Studio system, the top-level object of these bindings.
 ///
@@ -16,17 +7,9 @@ import 'package:vector_math/vector_math.dart';
 /// events. The Core API is reachable through [core] for raw sound and
 /// channel playback. Drive a system from a single isolate.
 class FmodStudioSystem {
-  FmodStudioSystem._(this.bindings, this._system) {
-    _resources = SystemResources(bindings);
-    bindings.check(
-      bindings.Studio_System_GetCoreSystem(_system, _resources.pointerOut),
-      'Studio_System_GetCoreSystem',
-    );
-    core = FmodCoreSystem.internal(
-      bindings,
-      _resources.pointerOut.value,
-      _resources,
-    );
+  FmodStudioSystem._(this._bindings, this._system, Pointer<Void> coreSystem) {
+    _resources = SystemResources(_bindings);
+    core = FmodCoreSystem._(_bindings, coreSystem, _resources);
   }
 
   /// Loads the FMOD libraries and creates and initializes a Studio
@@ -36,38 +19,23 @@ class FmodStudioSystem {
   /// 2.03 series these bindings target; pass the matching value when
   /// using another SDK series. [liveUpdate] enables mixing and
   /// profiling from the FMOD Studio tool over the network (development
-  /// builds only).
+  /// builds only). [output] selects the output driver;
+  /// [FmodOutputType.nosound] mixes without touching an audio device,
+  /// for headless runs and tests.
   factory FmodStudioSystem.create({
     int maxChannels = 256,
     bool liveUpdate = false,
     int headerVersion = kFmodDefaultHeaderVersion,
-    FmodLibrary? library,
-  }) {
-    final bindings = FmodBindings(library ?? FmodLibrary.open());
-    final out = calloc<Pointer<Void>>();
-    try {
-      bindings.check(
-        bindings.Studio_System_Create(out, headerVersion),
-        'Studio_System_Create',
-      );
-      final system = out.value;
-      bindings.check(
-        bindings.Studio_System_Initialize(
-          system,
-          maxChannels,
-          liveUpdate ? fmodStudioInitLiveUpdate : fmodStudioInitNormal,
-          fmodInitNormal,
-          nullptr,
-        ),
-        'Studio_System_Initialize',
-      );
-      return FmodStudioSystem._(bindings, system);
-    } finally {
-      calloc.free(out);
-    }
-  }
+    FmodOutputType output = FmodOutputType.autodetect,
+  }) => _createStudioSystem(
+    FmodBindings(FmodLibrary.open()),
+    maxChannels: maxChannels,
+    liveUpdate: liveUpdate,
+    headerVersion: headerVersion,
+    output: output,
+  );
 
-  final FmodBindings bindings;
+  final FmodBindings _bindings;
   final Pointer<Void> _system;
   late final SystemResources _resources;
 
@@ -79,8 +47,8 @@ class FmodStudioSystem {
   /// Processes queued commands and updates the 3D engine. Call once per
   /// frame.
   void update() {
-    bindings.check(
-      bindings.Studio_System_Update(_system),
+    _bindings.check(
+      _bindings.Studio_System_Update(_system),
       'Studio_System_Update',
     );
   }
@@ -90,8 +58,8 @@ class FmodStudioSystem {
     final pathUtf8 = path.toNativeUtf8();
     try {
       _resources.pointerOut.value = nullptr;
-      bindings.check(
-        bindings.Studio_System_LoadBankFile(
+      _bindings.check(
+        _bindings.Studio_System_LoadBankFile(
           _system,
           pathUtf8,
           fmodStudioLoadBankNormal,
@@ -111,8 +79,8 @@ class FmodStudioSystem {
     try {
       buffer.asTypedList(bytes.length).setAll(0, bytes);
       _resources.pointerOut.value = nullptr;
-      bindings.check(
-        bindings.Studio_System_LoadBankMemory(
+      _bindings.check(
+        _bindings.Studio_System_LoadBankMemory(
           _system,
           buffer,
           bytes.length,
@@ -135,8 +103,8 @@ class FmodStudioSystem {
     final pathUtf8 = path.toNativeUtf8();
     try {
       _resources.pointerOut.value = nullptr;
-      bindings.check(
-        bindings.Studio_System_GetEvent(
+      _bindings.check(
+        _bindings.Studio_System_GetEvent(
           _system,
           pathUtf8,
           _resources.pointerOut,
@@ -155,8 +123,12 @@ class FmodStudioSystem {
     final pathUtf8 = path.toNativeUtf8();
     try {
       _resources.pointerOut.value = nullptr;
-      bindings.check(
-        bindings.Studio_System_GetBus(_system, pathUtf8, _resources.pointerOut),
+      _bindings.check(
+        _bindings.Studio_System_GetBus(
+          _system,
+          pathUtf8,
+          _resources.pointerOut,
+        ),
         'Studio_System_GetBus',
       );
       return FmodStudioBus._(this, _resources.pointerOut.value);
@@ -180,8 +152,8 @@ class FmodStudioSystem {
       forward: forward,
       up: up,
     );
-    bindings.check(
-      bindings.Studio_System_SetListenerAttributes(
+    _bindings.check(
+      _bindings.Studio_System_SetListenerAttributes(
         _system,
         index,
         _resources.attributes,
@@ -196,8 +168,8 @@ class FmodStudioSystem {
   void release() {
     if (_released) return;
     _released = true;
-    bindings.check(
-      bindings.Studio_System_Release(_system),
+    _bindings.check(
+      _bindings.Studio_System_Release(_system),
       'Studio_System_Release',
     );
     _resources.release();
@@ -216,8 +188,8 @@ class FmodBank {
   void unload() {
     if (_unloaded) return;
     _unloaded = true;
-    _owner.bindings.check(
-      _owner.bindings.Studio_Bank_Unload(_bank),
+    _owner._bindings.check(
+      _owner._bindings.Studio_Bank_Unload(_bank),
       'Studio_Bank_Unload',
     );
   }
@@ -237,8 +209,8 @@ class FmodStudioBus {
 
   set volume(double value) {
     _volume = value;
-    _owner.bindings.check(
-      _owner.bindings.Studio_Bus_SetVolume(_bus, value),
+    _owner._bindings.check(
+      _owner._bindings.Studio_Bus_SetVolume(_bus, value),
       'Studio_Bus_SetVolume',
     );
   }
@@ -254,8 +226,11 @@ class FmodEventDescription {
   /// Creates a playable instance of this event.
   FmodEventInstance createInstance() {
     final out = _owner._resources.pointerOut..value = nullptr;
-    _owner.bindings.check(
-      _owner.bindings.Studio_EventDescription_CreateInstance(_description, out),
+    _owner._bindings.check(
+      _owner._bindings.Studio_EventDescription_CreateInstance(
+        _description,
+        out,
+      ),
       'Studio_EventDescription_CreateInstance',
     );
     return FmodEventInstance._(_owner, out.value);
@@ -269,7 +244,7 @@ class FmodEventInstance {
   final FmodStudioSystem _owner;
   final Pointer<Void> _instance;
 
-  FmodBindings get _bindings => _owner.bindings;
+  FmodBindings get _bindings => _owner._bindings;
 
   /// Starts (or restarts) the event.
   void start() {

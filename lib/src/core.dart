@@ -1,21 +1,11 @@
-import 'dart:ffi';
-import 'dart:io';
-import 'dart:typed_data';
-
-import 'package:ffi/ffi.dart';
-import 'package:fmod/src/common.dart';
-import 'package:fmod/src/ffi/bindings.dart';
-import 'package:fmod/src/system_resources.dart';
-import 'package:vector_math/vector_math.dart';
+part of 'fmod_base.dart';
 
 /// The FMOD Core API system underneath a Studio system, for raw sound
 /// and channel playback. Obtained from `FmodStudioSystem.core`.
 class FmodCoreSystem {
-  /// Wraps a native core system. Internal; reach a core system through
-  /// its studio system.
-  FmodCoreSystem.internal(this.bindings, this._system, this._resources);
+  FmodCoreSystem._(this._bindings, this._system, this._resources);
 
-  final FmodBindings bindings;
+  final FmodBindings _bindings;
   final Pointer<Void> _system;
   final SystemResources _resources;
 
@@ -26,8 +16,8 @@ class FmodCoreSystem {
     final cached = _master;
     if (cached != null) return cached;
     _resources.pointerOut.value = nullptr;
-    bindings.check(
-      bindings.System_GetMasterChannelGroup(_system, _resources.pointerOut),
+    _bindings.check(
+      _bindings.System_GetMasterChannelGroup(_system, _resources.pointerOut),
       'System_GetMasterChannelGroup',
     );
     return _master = FmodChannelGroup._(this, _resources.pointerOut.value);
@@ -38,8 +28,8 @@ class FmodCoreSystem {
     final pathUtf8 = path.toNativeUtf8();
     try {
       _resources.pointerOut.value = nullptr;
-      bindings.check(
-        bindings.System_CreateSound(
+      _bindings.check(
+        _bindings.System_CreateSound(
           _system,
           pathUtf8,
           mode,
@@ -82,8 +72,8 @@ class FmodCoreSystem {
     final nameUtf8 = name.toNativeUtf8();
     try {
       _resources.pointerOut.value = nullptr;
-      bindings.check(
-        bindings.System_CreateChannelGroup(
+      _bindings.check(
+        _bindings.System_CreateChannelGroup(
           _system,
           nameUtf8,
           _resources.pointerOut,
@@ -91,8 +81,8 @@ class FmodCoreSystem {
         'System_CreateChannelGroup',
       );
       final group = FmodChannelGroup._(this, _resources.pointerOut.value);
-      bindings.check(
-        bindings.ChannelGroup_AddGroup(
+      _bindings.check(
+        _bindings.ChannelGroup_AddGroup(
           (parent ?? masterChannelGroup)._group,
           group._group,
           1,
@@ -116,8 +106,8 @@ class FmodCoreSystem {
     bool paused = true,
   }) {
     _resources.pointerOut.value = nullptr;
-    bindings.check(
-      bindings.System_PlaySound(
+    _bindings.check(
+      _bindings.System_PlaySound(
         _system,
         sound._sound,
         (group ?? masterChannelGroup)._group,
@@ -143,8 +133,8 @@ class FmodSound {
 
   /// The decoded length.
   Duration get duration {
-    _owner.bindings.check(
-      _owner.bindings.Sound_GetLength(
+    _owner._bindings.check(
+      _owner._bindings.Sound_GetLength(
         _sound,
         _owner._resources.uintOut,
         fmodTimeUnitMs,
@@ -158,8 +148,8 @@ class FmodSound {
   void release() {
     if (_released) return;
     _released = true;
-    _owner.bindings.check(
-      _owner.bindings.Sound_Release(_sound),
+    _owner._bindings.check(
+      _owner._bindings.Sound_Release(_sound),
       'Sound_Release',
     );
   }
@@ -179,15 +169,15 @@ class FmodChannelGroup {
 
   set volume(double value) {
     _volume = value;
-    _owner.bindings.check(
-      _owner.bindings.ChannelGroup_SetVolume(_group, value),
+    _owner._bindings.check(
+      _owner._bindings.ChannelGroup_SetVolume(_group, value),
       'ChannelGroup_SetVolume',
     );
   }
 
   set paused(bool value) {
-    _owner.bindings.check(
-      _owner.bindings.ChannelGroup_SetPaused(_group, value ? 1 : 0),
+    _owner._bindings.check(
+      _owner._bindings.ChannelGroup_SetPaused(_group, value ? 1 : 0),
       'ChannelGroup_SetPaused',
     );
   }
@@ -205,7 +195,7 @@ class FmodChannel {
   final FmodCoreSystem _owner;
   final Pointer<Void> _channel;
 
-  FmodBindings get _bindings => _owner.bindings;
+  FmodBindings get _bindings => _owner._bindings;
 
   /// Whether the channel is still live (audible or paused).
   bool get isPlaying {

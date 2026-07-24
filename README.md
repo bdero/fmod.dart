@@ -4,7 +4,7 @@ Unofficial Dart FFI bindings for the [FMOD Engine](https://www.fmod.com) audio m
 
 This is a pure Dart package (no Flutter dependency), usable from Flutter apps, `dart run` programs, and servers on desktop and mobile targets. FMOD is a trademark of Firelight Technologies Pty Ltd; this package is not affiliated with or endorsed by Firelight.
 
-> **Status: experimental.** The wrapper covers the surface needed for game audio playback; the raw entry points are exposed through `FmodBindings` for anything not yet wrapped, and coverage grows as needed. Verified against FMOD Engine 2.03.14.
+> **Status: experimental.** The wrapper covers the surface needed for game audio playback; the raw native layer (`FmodBindings`, structs, the library loader) is exposed through `package:fmod/ffi.dart` for anything not yet wrapped, and coverage grows as needed. The main `package:fmod/fmod.dart` entry point is platform-neutral by design, so a web backend over FMOD's HTML5 build can slot in without breaking changes. Verified against FMOD Engine 2.03.14.
 
 ## FMOD SDK setup
 
@@ -50,4 +50,4 @@ void main() {
 }
 ```
 
-The SDK smoke tests run with `FMOD_SDK_PATH="<sdk root>" dart test` (they skip when the variable is unset, so CI needs no SDK).
+The SDK smoke tests run with `FMOD_SDK_PATH="<sdk root>" dart test` (they skip when the variable is unset, so CI needs no SDK). For headless environments, create the system with `output: FmodOutputType.nosound` and FMOD mixes without touching an audio device.
