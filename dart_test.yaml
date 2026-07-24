@@ -1,0 +1,4 @@
+# FMOD's studio system talks to one audio device and the smoke tests
+# each initialize their own system; run suites one at a time so two
+# isolates do not contend for the device.
+concurrency: 1

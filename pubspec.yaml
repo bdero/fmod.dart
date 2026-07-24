@@ -1,0 +1,26 @@
+name: fmod
+description: Unofficial Dart FFI bindings for the FMOD Engine audio middleware, covering the Studio and Core APIs against a user-supplied FMOD SDK.
+version: 0.1.0
+repository: https://github.com/bdero/fmod.dart
+homepage: https://github.com/bdero/fmod.dart
+issue_tracker: https://github.com/bdero/fmod.dart/issues
+
+topics:
+  - audio
+  - fmod
+  - ffi
+  - gamedev
+  - sound
+
+environment:
+  sdk: ^3.10.0
+
+dependencies:
+  code_assets: ^1.2.0
+  ffi: ^2.1.0
+  hooks: ^2.0.0
+  vector_math: ^2.1.4
+
+dev_dependencies:
+  lints: ^5.0.0
+  test: ^1.25.0
